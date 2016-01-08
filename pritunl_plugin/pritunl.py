@@ -1,12 +1,15 @@
 """Pritunl plugin for Let's Encrypt client"""
+import pymongo
+from pymongo import MongoClient
+import json
+import re
+import os
+import subprocess
 import logging
-
 import zope.component
 import zope.interface
-
 from letsencrypt import interfaces
 from letsencrypt.plugins import common
-
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +22,7 @@ class PritunlInstaller(common.Plugin):
 
     @classmethod
     def add_parser_arguments(cls, add):
-        add("PRITUNL_SETTINGS", default="/etc/pritunl.conf", help="Pritunl configuration file. E.g. /etc/pritunl.conf . If not specified the plugin will hope on /etc/pritunl.conf as path is correct.")
+        add("conf-path", default="/etc/pritunl.conf", help="Pritunl configuration file. E.g. /etc/pritunl.conf. If not specified the plugin will hope on /etc/pritunl.conf as path is correct.")
 
     def prepare(self):
         pass  # pragma: no cover
@@ -30,21 +33,18 @@ class PritunlInstaller(common.Plugin):
     def get_all_names(self):
         return []
 
-    def deploy_cert(self, domain, cert_path, key_path, chain_path, fullchain_path):
-
-        f_cert = open(fullchain_path, 'r')
+    def deploy_cert(self, domain, cert_path, key_path, chain_path=None, fullchain_path=None):
+        logger.info("Read certificate")
+        f_cert = open(cert_path, 'r')
         f_key = open(key_path, 'r')
 
-        with open(self.conf("PRITUNL_SETTINGS")) as data_file:
+        with open(self.conf("conf_path")) as data_file:
             printul_setting = json.load(data_file)
 
+        logger.info("Connect to databse %s" % printul_setting['mongodb_uri'])
         client = MongoClient(printul_setting['mongodb_uri'])
 
         db = client[re.search('(?<=/)\w+(?:\s|$)', printul_setting['mongodb_uri']).group(0)]
-
-        #cursor = db.settings.find()
-        #for document in cursor:
-        #    print(document)
 
         result = db.settings.update_one(
             {"_id": "app"},
@@ -53,13 +53,7 @@ class PritunlInstaller(common.Plugin):
 
         f_cert.close()
         f_key.close()
-
-        #print(result.modified_count)
-
-        os.remove(printul_setting['temp_path'] + '/server.key')
-        os.remove(printul_setting['temp_path'] + '/server.crt')
-
-        pass  # pragma: no cover
+        client.close()
 
     def enhance(self, domain, enhancement, options=None):
         pass  # pragma: no cover

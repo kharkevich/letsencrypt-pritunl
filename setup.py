@@ -1,7 +1,7 @@
 import os
 from setuptools import setup
 
-version = '0.1.1'
+version = '0.1.2'
 
 install_requires = [
     'letsencrypt',
@@ -21,6 +21,7 @@ setup(
     license='Apache License 2.0',
     keywords = ['letsencrypt', 'pritunl'],
     url='https://github.com/kharkevich/letsencrypt-pritunl',
+    download_url = 'https://github.com/kharkevich/letsencrypt-pritunl/tarball/0.1.2', # I'll explain this in a second
     packages=['pritunl_plugin'],
     long_description=read('README.md'),
     include_package_data=True,
